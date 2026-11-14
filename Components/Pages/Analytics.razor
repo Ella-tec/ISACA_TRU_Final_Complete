@@ -1,7 +1,8 @@
 @page "/analytics"
 @rendermode InteractiveServer
+@inject NavigationManager Navigation
 
-<PageTitle>Analytics | Isa</PageTitle>
+<PageTitle>Analytics | TRU</PageTitle>
 
 <style>
 .an{--navy:#1d2d5c;--blue:#00a4e4;--mid:#07649d;--green:#6cb33f;--light:#e7f0f5;--muted:#5f6b85;--line:#e2e8f0;--red:#e31837;--orange:#e57524;
@@ -29,6 +30,10 @@ cursor:pointer;text-align:left;font-family:inherit;color:inherit;transition:tran
 .an-card{background:#fff;border-radius:16px;padding:1rem;border:1px solid var(--line);box-shadow:0 8px 24px rgba(29,45,92,.06)}
 .an-card h2{margin:0 0 .25rem;font-size:1.05rem}
 .an-card .sub{margin:0 0 .85rem;font-size:.82rem;color:var(--muted)}
+button.an-activity{display:block;background:#eef5fb;border-radius:10px;padding:.65rem .8rem;margin-bottom:.45rem}
+button.an-activity:hover{background:#e0eef9}
+button.an-activity strong{display:block;font-size:.88rem;color:var(--navy,#1d2d5c)}
+button.an-activity span{font-size:.75rem;color:var(--muted,#5f6b85)}
 .an-donut-wrap{display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap}
 .an-donut{width:110px;height:110px;border-radius:50%;background:conic-gradient(var(--mid) 0 calc(var(--p)*1%),#e2e8f0 0);display:grid;place-items:center;flex-shrink:0}
 .an-donut span{width:72px;height:72px;border-radius:50%;background:#fff;display:grid;place-items:center;font-weight:700;font-size:1.15rem}
@@ -162,13 +167,14 @@ cursor:pointer;text-align:left;font-family:inherit;color:inherit;transition:tran
             <p class="sub">Workspace timeline</p>
             @foreach (var a in activity)
             {
-                <div class="an-activity">
+                <button type="button" class="an-activity" @onclick="() => OpenActivity(a)" style="width:100%;text-align:left;border:none;cursor:pointer;font:inherit">
                     <strong>@a.Title</strong>
                     <span>@a.When</span>
-                </div>
+                </button>
             }
             <button type="button" class="an-btn" @onclick="Refresh">Refresh data</button>
-            <button type="button" class="an-btn" @onclick='() => SetFocus("ot")'>View open tickets</button>
+            <button type="button" class="an-btn" @onclick="GoEscalations">View open tickets</button>
+            <button type="button" class="an-btn" @onclick="GoKnowledge">Knowledge base</button>
         </article>
     </div>
 </section>
@@ -257,5 +263,20 @@ cursor:pointer;text-align:left;font-family:inherit;color:inherit;transition:tran
         maxDay = days.Max(d => d.Count);
         questions = days.Sum(d => d.Count);
         SetFocus(focus);
+    }
+
+    private void GoEscalations() => Navigation.NavigateTo("/escalations");
+    private void GoKnowledge() => Navigation.NavigateTo("/knowledge-base");
+
+    private void OpenActivity(Act a)
+    {
+        if (a.Title.Contains("Escalation", StringComparison.OrdinalIgnoreCase))
+            Navigation.NavigateTo("/escalations");
+        else if (a.Title.Contains("knowledge", StringComparison.OrdinalIgnoreCase) || a.Title.Contains("article", StringComparison.OrdinalIgnoreCase))
+            Navigation.NavigateTo("/knowledge-base");
+        else if (a.Title.Contains("membership", StringComparison.OrdinalIgnoreCase))
+            focusText = a.Title + " — " + a.When + ". Review membership topics in Knowledge base or escalate if needed.";
+        else
+            focusText = a.Title + " — " + a.When;
     }
 }
