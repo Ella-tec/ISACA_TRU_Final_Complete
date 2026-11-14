@@ -1,5 +1,7 @@
 @page "/contact"
 @rendermode InteractiveServer
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
 
 <PageTitle>Contact | TRU Ask</PageTitle>
 
@@ -8,66 +10,89 @@
   --navy:#1d2d5c;--blue:#00a4e4;--mid:#07649d;--green:#6cb33f;--teal:#36ac91;--light:#e7f0f5;--muted:#5f6b85;--line:#e2e8f0;
   font-family:"Roboto",system-ui,sans-serif;color:var(--navy);
   width:100%!important;max-width:none!important;margin:0!important;
-  padding:10px 10px 0!important;
-  box-sizing:border-box;
-  /* Grow inside the flex main column */
-  flex:1 1 auto!important;
-  display:flex!important;
-  flex-direction:column!important;
-  min-height:0!important;
-  height:100%!important;
-  gap:10px;
+  padding:10px 10px 0!important;box-sizing:border-box;
+  flex:1 1 auto!important;display:flex!important;flex-direction:column!important;
+  min-height:0!important;gap:10px;
 }
 .ct-hero{
-  flex:0 0 auto;
-  border-radius:14px;padding:1rem 1.25rem;color:#fff;
+  flex:0 0 auto;border-radius:14px;padding:1.05rem 1.3rem;color:#fff;
   background:linear-gradient(120deg,#1d2d5c,#07649d 50%,#00a4e4);
 }
-.ct-hero h1{margin:.1rem 0 .2rem;font-family:"Roboto Slab",Georgia,serif;font-weight:600;font-size:1.5rem;color:#fff!important;line-height:1.25}
+.ct-hero h1{margin:.1rem 0 .25rem;font-family:"Roboto Slab",Georgia,serif;font-weight:600;font-size:1.55rem;color:#fff!important;line-height:1.25}
 .ct-hero p{margin:0;opacity:.92;font-size:.88rem}
-.ct-grid{
-  flex:1 1 auto;
-  display:grid;
-  grid-template-columns:minmax(0,1.15fr) minmax(260px,1fr);
-  gap:10px;
-  align-items:stretch;
-  min-height:0;
+.ct-actions{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.85rem}
+.ct-pill{
+  display:inline-flex;align-items:center;gap:.35rem;padding:.42rem .85rem;border-radius:999px;
+  font-size:.8rem;font-weight:700;text-decoration:none;border:1px solid rgba(255,255,255,.35);
+  background:rgba(255,255,255,.16);color:#fff!important;
 }
+.ct-pill:hover{background:rgba(255,255,255,.28)}
+.ct-pill--solid{background:#fff;color:var(--navy)!important;border-color:transparent}
+.ct-pill--solid:hover{filter:brightness(1.05)}
+
+.ct-row{
+  flex:1 1 auto;display:grid;grid-template-columns:1.1fr 1fr;gap:10px;min-height:0;align-items:stretch;
+}
+.ct-stack{display:flex;flex-direction:column;gap:10px;min-height:0}
 .ct-card{
-  background:#fff;border-radius:14px;padding:1.05rem 1.15rem;
-  min-width:0;border:1px solid var(--line);
-  box-shadow:0 4px 14px rgba(29,45,92,.05);
-  height:100%;
+  background:#fff;border-radius:14px;padding:1.05rem 1.15rem;min-width:0;
+  border:1px solid var(--line);box-shadow:0 4px 14px rgba(29,45,92,.05);
 }
-.ct-card h2{margin:0 0 .5rem;font-size:1rem}
+.ct-card h2{margin:0 0 .35rem;font-size:1.02rem;font-weight:700}
+.ct-card h3{margin:0 0 .25rem;font-size:.92rem;font-weight:700}
+.ct-card p.lead{margin:0 0 .75rem;font-size:.84rem;color:var(--muted);line-height:1.45}
 .ct-card label{display:block;font-size:.72rem;font-weight:600;color:var(--muted);margin-bottom:.15rem}
 .ct-card input,.ct-card textarea,.ct-card select{
-  width:100%;box-sizing:border-box;padding:.48rem .65rem;border-radius:9px;
-  border:1px solid var(--line);margin-bottom:.5rem;font-family:inherit;
+  width:100%;box-sizing:border-box;padding:.5rem .7rem;border-radius:9px;
+  border:1px solid var(--line);margin-bottom:.55rem;font-family:inherit;font-size:.9rem;
+}
+.ct-card input:focus,.ct-card textarea:focus,.ct-card select:focus{
+  outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(0,164,228,.15);
 }
 .ct-btn{
-  border:none;cursor:pointer;padding:.5rem 1rem;border-radius:10px;font-weight:700;font-family:inherit;
-  background:linear-gradient(135deg,var(--navy),var(--mid));color:#fff;
+  border:none;cursor:pointer;padding:.52rem 1.05rem;border-radius:10px;font-weight:700;font-family:inherit;font-size:.86rem;
+  background:linear-gradient(135deg,var(--navy),var(--mid));color:#fff;display:inline-flex;align-items:center;gap:.4rem;
+  text-decoration:none;
 }
 .ct-btn:hover{filter:brightness(1.06)}
-.ct-ok{background:#e8f6e8;color:#2d6a2d;padding:.5rem .75rem;border-radius:9px;font-size:.85rem;margin-bottom:.5rem}
+.ct-btn--green{background:linear-gradient(135deg,#1b5e20,#2e7d32)}
+.ct-btn--teal{background:linear-gradient(135deg,var(--teal),var(--mid))}
+.ct-btn--ghost{
+  background:#f4f7fb;color:var(--navy);border:1px solid var(--line);
+}
+.ct-btn--ghost:hover{background:#e8eef6}
+.ct-ok{background:#e8f6e8;color:#2d6a2d;padding:.55rem .75rem;border-radius:9px;font-size:.85rem;margin-bottom:.55rem}
+.ct-err{background:#fdecee;color:#9b1027;padding:.55rem .75rem;border-radius:9px;font-size:.85rem;margin-bottom:.55rem}
+.ct-soft{
+  background:linear-gradient(135deg,#f3e8ff,#ede9fe);border-radius:12px;padding:.85rem 1rem;margin-top:.75rem;
+}
+.ct-soft h3{color:#5b21b6}
+.ct-soft p{margin:0;font-size:.82rem;color:#6b7280;line-height:1.4}
+.ct-linkrow{display:flex;flex-wrap:wrap;gap:.45rem;margin-top:.65rem}
+.ct-meta{font-size:.84rem;color:var(--muted);line-height:1.5;margin:0 0 .75rem}
+.ct-meta strong{color:var(--navy)}
+.ct-quick{
+  display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:.35rem;
+}
+.ct-quick a{
+  display:flex;flex-direction:column;gap:.2rem;padding:.7rem .8rem;border-radius:12px;
+  border:1px solid var(--line);text-decoration:none;color:var(--navy);background:#fafbfd;
+  font-size:.82rem;font-weight:600;
+}
+.ct-quick a span{font-size:.72rem;font-weight:500;color:var(--muted)}
+.ct-quick a:hover{border-color:var(--blue);background:#f0f9ff}
 
-.ct > .sf,
-.ct > footer.sf{
-  margin-top:auto!important;
-  margin-bottom:0!important;
-  flex:0 0 auto!important;
-  width:100%!important;
+.ct > .sf, .ct > footer.sf{
+  margin-top:auto!important;margin-bottom:0!important;flex:0 0 auto!important;width:100%!important;
   border-radius:14px 14px 0 0!important;
 }
 
-@@media(max-width:900px){
-  .ct-grid{grid-template-columns:1fr;flex:0 0 auto}
-  .ct-card{height:auto}
+@@media(max-width:960px){
+  .ct-row{grid-template-columns:1fr}
+  .ct-quick{grid-template-columns:1fr}
 }
 @@media(max-width:560px){
   .ct{padding:8px 8px 0!important}
-  .ct-card{padding:.9rem}
 }
 </style>
 
@@ -75,56 +100,146 @@
     <header class="ct-hero">
         <div style="font-size:.62rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;opacity:.85">TRU Ask</div>
         <h1>Contact</h1>
-        <p>Reach chapter support or explore official ISACA resources.</p>
+        <p>Reach chapter support, start a video call, email the team, or open official ISACA resources.</p>
+        <div class="ct-actions">
+            <a class="ct-pill ct-pill--solid" href="https://meet.google.com/new" target="_blank" rel="noopener">Start video call</a>
+            <a class="ct-pill" href="mailto:support@isaca.org?subject=TRU%20Chapter%20Support">Email support</a>
+            <a class="ct-pill" href="tel:+18476605505">Call ISACA HQ</a>
+            <a class="ct-pill" href="/events">Events & calendar</a>
+        </div>
     </header>
 
-    <div class="ct-grid">
-        <article class="ct-card">
-            <h2>Send a message</h2>
-            @if (sent)
-            {
-                <div class="ct-ok">Message recorded for chapter follow-up. Thank you.</div>
-            }
-            <label>Name</label>
-            <input @bind="name" placeholder="Your name" />
-            <label>Email</label>
-            <input @bind="email" type="email" placeholder="you@example.com" />
-            <label>Topic</label>
-            <select @bind="topic">
-                <option>General</option>
-                <option>Membership</option>
-                <option>Events</option>
-                <option>Certification</option>
-                <option>Technical support</option>
-            </select>
-            <label>Message</label>
-            <textarea rows="4" @bind="message" placeholder="How can we help?"></textarea>
-            <button type="button" class="ct-btn" @onclick="Send">Send message</button>
-        </article>
-        <article class="ct-card">
-            <h2>Chapter &amp; ISACA</h2>
-            <p style="margin:0 0 .55rem;font-size:.86rem;color:var(--muted);line-height:1.4">
-                For official ISACA member services use the links below. Chapter-specific questions can use the form.
-            </p>
-            <p style="font-size:.86rem;margin:0 0 .25rem"><strong>ISACA HQ</strong></p>
-            <p style="font-size:.82rem;color:var(--muted);margin:0 0 .65rem;line-height:1.4">
-                1700 E. Golf Road, Suite 400<br />Schaumburg, Illinois 60173, USA<br />+1-847-660-5505
-            </p>
-            <a class="ct-btn" style="display:inline-block" href="https://www.isaca.org/contact-us" target="_blank" rel="noopener">ISACA Contact Us</a>
-            <a class="ct-btn" style="display:inline-block;margin-left:.3rem;background:linear-gradient(135deg,#36ac91,#07649d)" href="https://www.isaca.org" target="_blank" rel="noopener">ISACA.org</a>
-        </article>
+    <div class="ct-row">
+        <div class="ct-stack">
+            <article class="ct-card">
+                <h2>Send a message</h2>
+                <p class="lead">Chapter-specific questions. Submitting opens your email app with a ready-to-send message.</p>
+                @if (!string.IsNullOrEmpty(statusOk))
+                {
+                    <div class="ct-ok">@statusOk</div>
+                }
+                @if (!string.IsNullOrEmpty(statusErr))
+                {
+                    <div class="ct-err">@statusErr</div>
+                }
+                <label>Name</label>
+                <input @bind="name" placeholder="Your name" />
+                <label>Email</label>
+                <input @bind="email" type="email" placeholder="you@example.com" />
+                <label>Topic</label>
+                <select @bind="topic">
+                    <option>General</option>
+                    <option>Membership</option>
+                    <option>Events</option>
+                    <option>Certification</option>
+                    <option>Technical support</option>
+                    <option>Video meeting</option>
+                </select>
+                <label>Message</label>
+                <textarea rows="4" @bind="message" placeholder="How can we help?"></textarea>
+                <div class="ct-linkrow">
+                    <button type="button" class="ct-btn" @onclick="SendEmail">Send via email</button>
+                    <button type="button" class="ct-btn ct-btn--ghost" @onclick="RecordLocal">Save note locally</button>
+                </div>
+            </article>
+
+            <article class="ct-card">
+                <h2>Meet online</h2>
+                <p class="lead">Start a Google Meet session and share the link with your chapter team or guest.</p>
+                <div class="ct-linkrow">
+                    <a class="ct-btn ct-btn--green" href="https://meet.google.com/new" target="_blank" rel="noopener">Start a video call</a>
+                    <a class="ct-btn ct-btn--ghost" href="https://calendar.google.com/calendar/u/0/r/eventedit" target="_blank" rel="noopener">Schedule in Google Calendar</a>
+                </div>
+                <div class="ct-soft">
+                    <h3>Online training</h3>
+                    <p>Plan a webinar, toolbox talk, or CPE session, then track it on the Events workspace.</p>
+                    <div class="ct-linkrow">
+                        <a class="ct-btn ct-btn--teal" href="/events">Open Events & calendar</a>
+                    </div>
+                </div>
+            </article>
+        </div>
+
+        <div class="ct-stack">
+            <article class="ct-card">
+                <h2>Chapter & ISACA</h2>
+                <p class="ct-meta">
+                    <strong>ISACA HQ</strong><br />
+                    1700 E. Golf Road, Suite 400<br />
+                    Schaumburg, Illinois 60173, USA<br />
+                    <a href="tel:+18476605505" style="color:var(--mid);font-weight:600">+1-847-660-5505</a>
+                </p>
+                <div class="ct-linkrow">
+                    <a class="ct-btn" href="https://www.isaca.org/contact-us" target="_blank" rel="noopener">ISACA Contact Us</a>
+                    <a class="ct-btn ct-btn--teal" href="https://www.isaca.org" target="_blank" rel="noopener">ISACA.org</a>
+                    <a class="ct-btn ct-btn--ghost" href="mailto:support@isaca.org">support@isaca.org</a>
+                </div>
+            </article>
+
+            <article class="ct-card">
+                <h2>Quick access</h2>
+                <p class="lead">Jump to the tools your chapter uses most.</p>
+                <div class="ct-quick">
+                    <a href="/"><strong>Home / TRU Ask</strong><span>Ask chapter questions</span></a>
+                    <a href="/knowledge-base"><strong>Knowledge base</strong><span>Approved guidance</span></a>
+                    <a href="/resource-library"><strong>Resource library</strong><span>Guides & templates</span></a>
+                    <a href="/events"><strong>Events & calendar</strong><span>Meetings & CPE</span></a>
+                    <a href="/escalations"><strong>Escalations</strong><span>Tickets & follow-up</span></a>
+                    <a href="/governance"><strong>Governance</strong><span>Policies & forms</span></a>
+                    <a href="/settings"><strong>Settings</strong><span>Account & uploads</span></a>
+                    <a href="https://www.isaca.org/credentialing" target="_blank" rel="noopener"><strong>Credentialing</strong><span>CISA, CISM, CRISC…</span></a>
+                </div>
+            </article>
+        </div>
     </div>
 
     <SiteFooter />
 </section>
 
 @code {
-    private string name = "", email = "", topic = "General", message = "";
-    private bool sent;
-    private void Send()
+    private string name = "";
+    private string email = "";
+    private string topic = "General";
+    private string message = "";
+    private string statusOk = "";
+    private string statusErr = "";
+
+    private async Task SendEmail()
     {
-        if (string.IsNullOrWhiteSpace(message)) return;
-        sent = true;
+        statusOk = "";
+        statusErr = "";
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            statusErr = "Please enter a message before sending.";
+            return;
+        }
+
+        var subject = Uri.EscapeDataString($"TRU Chapter Support — {topic}");
+        var body = Uri.EscapeDataString(
+            $"Name: {name}\nEmail: {email}\nTopic: {topic}\n\n{message}\n\n— Sent from TRU Contact");
+        var mailto = $"mailto:support@isaca.org?subject={subject}&body={body}";
+
+        try
+        {
+            await JS.InvokeVoidAsync("open", mailto, "_self");
+            statusOk = "Your email app should open with the message ready to send.";
+        }
+        catch
+        {
+            Navigation.NavigateTo(mailto);
+            statusOk = "Opening your email client…";
+        }
+    }
+
+    private void RecordLocal()
+    {
+        statusErr = "";
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            statusErr = "Please enter a message before saving.";
+            return;
+        }
+        statusOk = "Message noted for chapter follow-up. Use Send via email to deliver it.";
         message = "";
     }
 }
