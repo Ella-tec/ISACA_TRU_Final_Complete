@@ -1,49 +1,45 @@
 @page "/governance"
 @rendermode InteractiveServer
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
 
-<PageTitle>Governance & Policies | Isa</PageTitle>
+<PageTitle>Governance & Policies | TRU</PageTitle>
 
 <style>
-.gov{--navy:#1d2d5c;--blue:#00a4e4;--mid:#07649d;--green:#6cb33f;--light:#e7f0f5;--muted:#5f6b85;--line:#e2e8f0;--purple:#6558b1;
-font-family:"Roboto",system-ui,sans-serif;color:var(--navy);width:100%;max-width:none;margin:0;padding:.75rem .85rem 1.25rem;box-sizing:border-box}
-.gov-hero{border-radius:20px;padding:1.1rem 1.35rem;color:#fff;margin-bottom:.85rem;width:100%;box-sizing:border-box;
-background:linear-gradient(115deg,#6558b1 0%,#1d2d5c 50%,#07649d 100%);box-shadow:0 16px 44px rgba(29,45,92,.18)}
-.gov-hero h1{margin:.2rem 0 .35rem;font-family:"Roboto Slab",Georgia,serif;font-weight:300;font-size:1.55rem}
+.gov{--navy:#1d2d5c;--purple:#5b4b8a;--mid:#3d4f8c;--blue:#07649d;--muted:#5f6b85;--line:#e2e8f0;--light:#f0eef8;
+font-family:"Roboto",system-ui,sans-serif;color:var(--navy);width:100%;max-width:none;margin:0;padding:12px;box-sizing:border-box}
+.gov-hero{border-radius:18px;padding:1.5rem 1.75rem;color:#fff;margin-bottom:1rem;
+background:linear-gradient(115deg,#4a3f7a 0%,#2c3e6b 55%,#0a3d6b 100%);box-shadow:0 14px 36px rgba(45,40,90,.2)}
+.gov-hero h1{margin:.2rem 0 .35rem;font-family:"Roboto Slab",Georgia,serif;font-weight:300;font-size:1.75rem}
 .gov-hero p{margin:0;opacity:.92;max-width:52ch;line-height:1.45}
-.gov-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem;margin-bottom:1rem}
-.gov-kpi{background:#fff;border-radius:16px;padding:1.15rem;border:1px solid var(--line);box-shadow:0 8px 24px rgba(29,45,92,.06);
-cursor:pointer;text-align:left;font-family:inherit;color:inherit;transition:transform .12s,border-color .12s}
-.gov-kpi:hover{transform:translateY(-2px);border-color:var(--blue)}
-.gov-kpi.on{border-color:var(--purple);box-shadow:0 0 0 2px rgba(101,88,177,.28)}
+.gov-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:.65rem;margin-bottom:.75rem}
+.gov-kpi{background:#fff;border-radius:14px;padding:1rem;border:1px solid var(--line);box-shadow:0 6px 18px rgba(29,45,92,.06);
+cursor:pointer;text-align:left;font-family:inherit;color:inherit;transition:border-color .12s,box-shadow .12s}
+.gov-kpi:hover{border-color:#9b8fd4}.gov-kpi.on{border-color:#6b5b9a;box-shadow:0 0 0 2px rgba(107,91,154,.25)}
 .gov-kpi .l{font-size:.62rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.gov-kpi .v{font-size:1.55rem;font-family:"Roboto Slab",Georgia,serif;font-weight:300;margin:.15rem 0}
-.gov-kpi .t{font-size:.8rem;color:var(--muted)}
+.gov-kpi .v{font-size:1.5rem;font-family:"Roboto Slab",Georgia,serif;font-weight:300;margin:.15rem 0}
+.gov-kpi .t{font-size:.78rem;color:var(--muted)}
 .gov-detail{background:#f0eef8;border-radius:14px;padding:1rem 1.2rem;margin-bottom:1rem;border:1px solid #d5d0ea;font-size:.9rem;line-height:1.45}
-.gov-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:.85rem;margin-bottom:1rem}
-.gov-card{background:#fff;border-radius:16px;padding:1.2rem;border:1px solid var(--line);box-shadow:0 8px 24px rgba(29,45,92,.06)}
-.gov-card h2{margin:0 0 .25rem;font-size:1.05rem}
-.gov-card .sub{margin:0 0 .75rem;font-size:.82rem;color:var(--muted)}
-.gov-row{display:flex;align-items:center;justify-content:space-between;gap:.75rem;padding:.7rem 0;border-bottom:1px solid var(--line)}
-.gov-row:last-child{border-bottom:0}
-.gov-row strong{display:block;font-size:.92rem}
-.gov-row small{color:var(--muted);font-size:.8rem}
-.gov-btn{border:none;cursor:pointer;padding:.4rem .85rem;border-radius:9px;font-weight:600;font-size:.82rem;font-family:inherit;
-background:linear-gradient(135deg,var(--navy),var(--purple));color:#fff}
-.gov-btn-g{background:var(--light);color:var(--navy);border:1px solid var(--line)}
-.gov-bars{display:flex;align-items:flex-end;gap:8px;height:120px;margin:.5rem 0 1.3rem}
-.gov-bar{flex:1;border-radius:7px 7px 3px 3px;background:linear-gradient(180deg,var(--purple),var(--mid));cursor:pointer;min-height:10px;border:none;padding:0;position:relative}
-.gov-bar:hover{filter:brightness(1.1)}
-.gov-bar span{position:absolute;bottom:-1.2rem;left:50%;transform:translateX(-50%);font-size:.65rem;color:var(--muted);white-space:nowrap}
-.gov-check{display:flex;align-items:flex-start;gap:.5rem;padding:.4rem 0;font-size:.88rem}
-.gov-check input{margin-top:.2rem}
-.gov-search{width:100%;box-sizing:border-box;padding:.55rem .75rem;border-radius:10px;border:1px solid var(--line);font-family:inherit;margin-bottom:.75rem}
-@@media(max-width:1000px){.gov-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.gov-grid{grid-template-columns:1fr}} @@media(max-width:560px){.gov{padding:.5rem}.gov-kpis{grid-template-columns:1fr}.gov-hero{padding:1rem}.gov-card{padding:.9rem}.gov-row{align-items:flex-start}.gov-search{max-width:100%}}
+.gov-grid{display:grid;grid-template-columns:1.15fr 1fr;gap:.7rem}
+.gov-card{background:#fff;border-radius:14px;padding:1rem 1.1rem;border:1px solid var(--line);box-shadow:0 6px 18px rgba(29,45,92,.05)}
+.gov-card h2{margin:0 0 .2rem;font-size:1.05rem}.gov-card .sub{margin:0 0 .75rem;font-size:.82rem;color:var(--muted)}
+.gov-search{width:100%;box-sizing:border-box;padding:.5rem .75rem;border-radius:999px;border:1.5px solid var(--line);margin-bottom:.75rem;font:inherit}
+.gov-row{display:flex;align-items:center;justify-content:space-between;gap:.75rem;padding:.7rem 0;border-bottom:1px solid #f1f5f9}
+.gov-row:last-child{border-bottom:none}
+.gov-row strong{display:block}.gov-row small{color:var(--muted);font-size:.8rem}
+.gov-btn{border:none;border-radius:10px;padding:.4rem .85rem;font-weight:700;font-size:.8rem;cursor:pointer;font-family:inherit;background:#3d3a6b;color:#fff}
+.gov-btn-g{background:#e8e6f4;color:#3d3a6b}
+.gov-cal-row{display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.65rem 0;border-bottom:1px solid #f1f5f9}
+.gov-cal-row:last-child{border-bottom:none}
+.gov-bars{display:flex;align-items:flex-end;gap:8px;height:90px;margin:.5rem 0 1rem}
+.gov-bar{flex:1;background:linear-gradient(180deg,#7c6fb5,#4a3f7a);border-radius:6px 6px 2px 2px;border:none;cursor:pointer;min-height:10px}
+@@media(max-width:900px){.gov-kpis{grid-template-columns:1fr 1fr}.gov-grid{grid-template-columns:1fr}}
 </style>
 
 <section class="gov">
     <header class="gov-hero">
-        <div style="font-size:.68rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;opacity:.85">Trust &amp; compliance</div>
-        <h1>Governance &amp; policies</h1>
+        <div style="font-size:.68rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;opacity:.85">TRUST & COMPLIANCE</div>
+        <h1>Governance & policies</h1>
         <p>Policy register and review calendar — every metric is a button. Charts and rows open detail and actions.</p>
     </header>
 
@@ -64,14 +60,26 @@ background:linear-gradient(135deg,var(--navy),var(--purple));color:#fff}
 
     @if (!string.IsNullOrEmpty(detail))
     {
-        <div class="gov-detail">@detail</div>
+        <div class="gov-detail">
+            <div>@detail</div>
+            <div style="margin-top:.65rem;display:flex;flex-wrap:wrap;gap:.4rem">
+                @if (selectedPolicy is not null)
+                {
+                    <button type="button" class="gov-btn" @onclick="OpenIsacaForSelected">Open ISACA resource</button>
+                    <button type="button" class="gov-btn gov-btn-g" @onclick="MarkReviewed">Mark approved</button>
+                }
+                <a class="gov-btn" style="text-decoration:none" href="https://www.isaca.org/resources" target="_blank" rel="noopener">ISACA Resources</a>
+                <a class="gov-btn" style="text-decoration:none" href="https://www.isaca.org/resources/cobit" target="_blank" rel="noopener">COBIT</a>
+                <a class="gov-btn gov-btn-g" style="text-decoration:none" href="/events">Plan on Events</a>
+            </div>
+        </div>
     }
 
     <div class="gov-grid">
         <article class="gov-card">
             <h2>Policy register</h2>
             <p class="sub">Filter and open policies</p>
-            <input class="gov-search" @bind="search" @bind:event="oninput" placeholder="Search policies…" />
+            <input class="gov-search" @bind="search" @bind:event="oninput" placeholder="Search policies..." />
             @foreach (var p in Filtered)
             {
                 <div class="gov-row">
@@ -82,44 +90,26 @@ background:linear-gradient(135deg,var(--navy),var(--purple));color:#fff}
                     <button type="button" class="gov-btn" @onclick="() => OpenPolicy(p)">Open</button>
                 </div>
             }
-            <div style="margin-top:1.1rem">
-                <h2 style="font-size:.95rem">Review load by quarter</h2>
-                <div class="gov-bars">
-                    @foreach (var q in quarters)
-                    {
-                        <button type="button" class="gov-bar" style="height:@q.H%" @onclick="() => ShowQuarter(q)">
-                            <span>@q.Label</span>
-                        </button>
-                    }
-                </div>
-            </div>
         </article>
         <article class="gov-card">
             <h2>Review calendar</h2>
             <p class="sub">Upcoming policy reviews</p>
+            <div class="gov-bars">
+                @foreach (var q in quarters)
+                {
+                    <button type="button" class="gov-bar" style="height:@q.H%" @onclick="() => ShowQuarter(q)" title="@q.Label"></button>
+                }
+            </div>
             @foreach (var c in calendar)
             {
-                <div class="gov-row">
+                <div class="gov-cal-row">
                     <div>
-                        <strong>@c.Title</strong>
-                        <small>@c.When · @c.Owner</small>
+                        <strong style="color:#3d3a6b">@c.Title</strong>
+                        <div style="font-size:.8rem;color:var(--muted)">@c.When · @c.Owner</div>
                     </div>
                     <button type="button" class="gov-btn gov-btn-g" @onclick="() => Plan(c)">Plan</button>
                 </div>
             }
-            <h2 style="font-size:.95rem;margin:1.1rem 0 .5rem">Suggested review checklist</h2>
-            @foreach (var ck in checks)
-            {
-                <label class="gov-check">
-                    <input type="checkbox" @bind="ck.Done" />
-                    <span>@ck.Text</span>
-                </label>
-            }
-            <p class="sub" style="margin-top:.5rem">Checklist is session-local and resets on restart.</p>
-            <div style="margin-top:.75rem;display:flex;gap:.4rem;flex-wrap:wrap">
-                <a class="gov-btn" href="content-health">Content health</a>
-                <a class="gov-btn gov-btn-g" href="knowledge-base">Related articles</a>
-            </div>
         </article>
     </div>
 </section>
@@ -130,7 +120,7 @@ background:linear-gradient(135deg,var(--navy),var(--purple));color:#fff}
     private string search = "";
     private string nextLabel = "Nov";
     private string nextYear = "2026";
-    private int total = 5, approved = 3, needs = 2;
+    private Policy? selectedPolicy;
 
     private sealed class Policy
     {
@@ -138,35 +128,24 @@ background:linear-gradient(135deg,var(--navy),var(--purple));color:#fff}
         public string Owner { get; set; } = "";
         public string Status { get; set; } = "";
     }
-    private sealed class CalItem
-    {
-        public string Title { get; set; } = "";
-        public string When { get; set; } = "";
-        public string Owner { get; set; } = "";
-    }
-    private sealed class Quarter
-    {
-        public string Label { get; set; } = "";
-        public int H { get; set; }
-        public string Note { get; set; } = "";
-    }
-    private sealed class Check
-    {
-        public string Text { get; set; } = "";
-        public bool Done { get; set; }
-    }
+    private sealed class CalItem { public string Title { get; set; } = ""; public string When { get; set; } = ""; public string Owner { get; set; } = ""; }
+    private sealed class Quarter { public string Label { get; set; } = ""; public int H { get; set; } public string Note { get; set; } = ""; }
+    private sealed class Check { public string Text { get; set; } = ""; }
 
     private List<Policy> policies = new();
     private List<CalItem> calendar = new();
     private List<Quarter> quarters = new();
     private List<Check> checks = new();
 
-    private IEnumerable<Policy> Filtered =>
+    private int total => policies.Count;
+    private int approved => policies.Count(p => p.Status.Equals("Approved", StringComparison.OrdinalIgnoreCase));
+    private int needs => policies.Count(p => p.Status.Contains("review", StringComparison.OrdinalIgnoreCase));
+
+    private IEnumerable<Policy> Filtered => policies.Where(p =>
         string.IsNullOrWhiteSpace(search)
-            ? policies
-            : policies.Where(p => p.Title.Contains(search, StringComparison.OrdinalIgnoreCase)
-                || p.Owner.Contains(search, StringComparison.OrdinalIgnoreCase)
-                || p.Status.Contains(search, StringComparison.OrdinalIgnoreCase));
+        || p.Title.Contains(search, StringComparison.OrdinalIgnoreCase)
+        || p.Owner.Contains(search, StringComparison.OrdinalIgnoreCase)
+        || p.Status.Contains(search, StringComparison.OrdinalIgnoreCase));
 
     protected override void OnInitialized()
     {
@@ -218,17 +197,47 @@ background:linear-gradient(135deg,var(--navy),var(--purple));color:#fff}
 
     private void OpenPolicy(Policy p)
     {
-        detail = $"Opened: {p.Title} — Owner: {p.Owner}, Status: {p.Status}. Attach evidence and set next review in your chapter records.";
         focus = p.Status.Contains("review", StringComparison.OrdinalIgnoreCase) ? "rev" : "ok";
+        var isaca = PolicyIsacaLink(p.Title);
+        detail = $"Opened: {p.Title} — Owner: {p.Owner}, Status: {p.Status}. Related ISACA guidance available below.";
+        selectedPolicy = p;
+    }
+
+    private async Task OpenIsacaForSelected()
+    {
+        if (selectedPolicy is null) return;
+        var url = PolicyIsacaLink(selectedPolicy.Title);
+        if (string.IsNullOrEmpty(url)) url = "https://www.isaca.org/resources";
+        await JS.InvokeVoidAsync("open", url, "_blank");
+    }
+
+    private void MarkReviewed()
+    {
+        if (selectedPolicy is null) return;
+        selectedPolicy.Status = "Approved";
+        detail = $"{selectedPolicy.Title} marked Approved. Schedule the next annual review.";
+        SetFocus("ok");
     }
 
     private void Plan(CalItem c)
     {
-        detail = $"Planned review: {c.Title} ({c.When}) — Owner {c.Owner}. Add agenda item to the board/ops calendar.";
+        detail = $"Planned review: {c.Title} ({c.When}) — Owner {c.Owner}. Open Events to put it on the chapter calendar, or use ISACA resources for the framework.";
+        selectedPolicy = policies.FirstOrDefault(p => p.Title == c.Title);
     }
 
     private void ShowQuarter(Quarter q)
     {
         detail = $"{q.Label} review load: {q.Note} (relative chart height {q.H}%).";
+    }
+
+    private static string PolicyIsacaLink(string title)
+    {
+        var t = title.ToLowerInvariant();
+        if (t.Contains("access") || t.Contains("role")) return "https://www.isaca.org/resources/cobit";
+        if (t.Contains("escalation") || t.Contains("support")) return "https://www.isaca.org/resources";
+        if (t.Contains("ai") || t.Contains("answer")) return "https://www.isaca.org/resources/white-papers/2025/leveraging-cobit-for-effective-ai-system-governance";
+        if (t.Contains("knowledge") || t.Contains("content")) return "https://www.isaca.org/resources";
+        if (t.Contains("board") || t.Contains("handbook")) return "https://www.isaca.org/chapters";
+        return "https://www.isaca.org/resources";
     }
 }
