@@ -38,8 +38,8 @@ html, body { margin: 0 !important; padding: 0 !important; background: #0a1f4d !i
 .si-top__sign:hover { background: #123066; }
 .si-hero {
   position: relative; width: 100%;
-  height: clamp(240px, 40vh, 360px);
-  min-height: 240px; max-height: 360px;
+  height: clamp(290px, 46vh, 420px);
+  min-height: 290px; max-height: 420px;
   overflow: hidden; background: var(--navy); flex-shrink: 0;
 }
 .si-hero__slide {
@@ -90,7 +90,7 @@ html, body { margin: 0 !important; padding: 0 !important; background: #0a1f4d !i
   transition: width .25s ease, border-radius .25s ease, background .25s ease;
 }
 .si-hero__dot.is-on { background: #fff; width: 16px; border-radius: 999px; }
-/* Full-bleed 16:9 video — edge-to-edge, no black side bars */
+/* Full-bleed video under hero — cover fill, no side bars, height capped */
 .si-vid {
   width: 100%; margin: 0; padding: 0; box-sizing: border-box;
   background: #000; flex: 0 0 auto;
@@ -99,17 +99,20 @@ html, body { margin: 0 !important; padding: 0 !important; background: #0a1f4d !i
 .si-vid__frame {
   position: relative;
   width: 100%;
-  aspect-ratio: 16 / 9;
-  height: auto;
+  height: min(40vh, 400px);
   overflow: hidden;
   background: #000;
   border-radius: 0;
 }
 .si-vid__frame iframe {
   position: absolute;
-  top: 0; left: 0;
-  width: 100%;
-  height: 100%;
+  top: 50%;
+  left: 50%;
+  width: 100vw;
+  height: 56.25vw;
+  min-width: 100%;
+  min-height: 100%;
+  transform: translate(-50%, -50%);
   border: 0;
   display: block;
 }
@@ -157,12 +160,12 @@ html, body { margin: 0 !important; padding: 0 !important; background: #0a1f4d !i
 .si-submit:hover { background: #123066; }
 @@media (max-width: 800px) {
   .si-search { max-width: none; order: 3; flex-basis: 100%; }
-  .si-hero { height: clamp(200px, 34vh, 280px); max-height: 280px; }
-  .si-vid__frame { aspect-ratio: 16 / 9; height: auto; }
+  .si-hero { height: clamp(240px, 38vh, 320px); max-height: 320px; }
+  .si-vid__frame { height: min(36vh, 320px); }
 }
 @@media (max-height: 700px) {
-  .si-hero { height: clamp(180px, 32vh, 240px); max-height: 240px; }
-  .si-vid__frame { aspect-ratio: 16 / 9; height: auto; }
+  .si-hero { height: clamp(220px, 36vh, 280px); max-height: 280px; }
+  .si-vid__frame { height: min(36vh, 320px); }
   .si-hero__inner { padding: 1rem 1.1rem 2rem; }
 }
 </style>
