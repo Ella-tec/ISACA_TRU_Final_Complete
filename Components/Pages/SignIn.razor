@@ -36,10 +36,11 @@ html, body { margin: 0 !important; padding: 0 !important; background: #0a1f4d !i
   border: 0; cursor: pointer; font-family: inherit;
 }
 .si-top__sign:hover { background: #123066; }
+/* Balanced hero — not skinny */
 .si-hero {
   position: relative; width: 100%;
-  height: clamp(290px, 46vh, 420px);
-  min-height: 290px; max-height: 420px;
+  height: clamp(320px, 42vh, 400px);
+  min-height: 320px; max-height: 400px;
   overflow: hidden; background: var(--navy); flex-shrink: 0;
 }
 .si-hero__slide {
@@ -53,20 +54,20 @@ html, body { margin: 0 !important; padding: 0 !important; background: #0a1f4d !i
 }
 .si-hero__inner {
   position: relative; z-index: 2; max-width: 1000px; width: 100%; margin: 0 auto;
-  padding: 1.25rem 1.35rem 2.4rem; color: #fff; box-sizing: border-box;
+  padding: 1.5rem 1.5rem 2.6rem; color: #fff; box-sizing: border-box;
 }
-.si-hero__crumb { font-size: .7rem; opacity: .7; margin-bottom: .4rem; }
+.si-hero__crumb { font-size: .72rem; opacity: .7; margin-bottom: .45rem; }
 .si-hero__inner h1 {
-  margin: 0 0 .35rem; font-size: clamp(1.45rem, 3.2vw, 2.1rem); font-weight: 700;
+  margin: 0 0 .4rem; font-size: clamp(1.55rem, 3.4vw, 2.25rem); font-weight: 700;
   line-height: 1.12; max-width: 16ch; color: #fff;
 }
 .si-hero__inner p {
-  margin: 0 0 .85rem; font-size: clamp(.84rem, 1.2vw, .98rem); opacity: .93;
+  margin: 0 0 .9rem; font-size: clamp(.88rem, 1.25vw, 1.02rem); opacity: .93;
   max-width: 30rem; line-height: 1.45; color: #e8eef8;
 }
 .si-btn {
   display: inline-flex; align-items: center; justify-content: center;
-  padding: .5rem 1.05rem; border-radius: 6px; font-weight: 700; font-size: .82rem;
+  padding: .55rem 1.1rem; border-radius: 6px; font-weight: 700; font-size: .84rem;
   border: none; cursor: pointer; font-family: inherit;
   background: #fff !important; color: #0a1f4d !important;
   box-shadow: 0 2px 10px rgba(0,0,0,.12);
@@ -74,14 +75,14 @@ html, body { margin: 0 !important; padding: 0 !important; background: #0a1f4d !i
 .si-btn:hover { background: #e8eef8 !important; }
 .si-hero__nav {
   position: absolute; top: 50%; transform: translateY(-50%); z-index: 5;
-  width: 32px; height: 32px; border-radius: 50%; border: none; cursor: pointer;
-  background: rgba(255,255,255,.9); color: var(--navy); font-size: 1.05rem; font-weight: 700;
+  width: 34px; height: 34px; border-radius: 50%; border: none; cursor: pointer;
+  background: rgba(255,255,255,.9); color: var(--navy); font-size: 1.1rem; font-weight: 700;
   display: grid; place-items: center; box-shadow: 0 3px 10px rgba(0,0,0,.12);
 }
 .si-hero__nav.prev { left: 12px; }
 .si-hero__nav.next { right: 12px; }
 .si-hero__dots {
-  position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); z-index: 5;
+  position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); z-index: 5;
   display: flex; align-items: center; gap: 5px;
 }
 .si-hero__dot {
@@ -90,7 +91,7 @@ html, body { margin: 0 !important; padding: 0 !important; background: #0a1f4d !i
   transition: width .25s ease, border-radius .25s ease, background .25s ease;
 }
 .si-hero__dot.is-on { background: #fff; width: 16px; border-radius: 999px; }
-/* Full-bleed video under hero — cover fill, no side bars, height capped */
+/* Full-width normal YouTube player — controls (sound/settings) fully visible */
 .si-vid {
   width: 100%; margin: 0; padding: 0; box-sizing: border-box;
   background: #000; flex: 0 0 auto;
@@ -99,26 +100,21 @@ html, body { margin: 0 !important; padding: 0 !important; background: #0a1f4d !i
 .si-vid__frame {
   position: relative;
   width: 100%;
-  height: min(40vh, 400px);
+  aspect-ratio: 16 / 9;
+  height: auto;
   overflow: hidden;
   background: #000;
   border-radius: 0;
 }
 .si-vid__frame iframe {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 100vw;
-  height: 56.25vw;
-  min-width: 100%;
-  min-height: 100%;
-  transform: translate(-50%, -50%);
+  inset: 0;
+  width: 100%;
+  height: 100%;
   border: 0;
   display: block;
 }
-.si-vid__hint {
-  display: none;
-}
+.si-vid__hint { display: none; }
 .si-modal-bg {
   position: fixed; inset: 0; z-index: 2147483600;
   background: rgba(7, 22, 54, .55); backdrop-filter: blur(4px);
@@ -160,13 +156,11 @@ html, body { margin: 0 !important; padding: 0 !important; background: #0a1f4d !i
 .si-submit:hover { background: #123066; }
 @@media (max-width: 800px) {
   .si-search { max-width: none; order: 3; flex-basis: 100%; }
-  .si-hero { height: clamp(240px, 38vh, 320px); max-height: 320px; }
-  .si-vid__frame { height: min(36vh, 320px); }
+  .si-hero { height: clamp(260px, 38vh, 340px); max-height: 340px; }
 }
 @@media (max-height: 700px) {
-  .si-hero { height: clamp(220px, 36vh, 280px); max-height: 280px; }
-  .si-vid__frame { height: min(36vh, 320px); }
-  .si-hero__inner { padding: 1rem 1.1rem 2rem; }
+  .si-hero { height: clamp(240px, 36vh, 300px); max-height: 300px; }
+  .si-hero__inner { padding: 1.1rem 1.2rem 2.2rem; }
 }
 </style>
 
