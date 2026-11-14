@@ -50,7 +50,13 @@ button.an-activity span{font-size:.75rem;color:var(--muted,#5f6b85)}
 .an-activity{padding:.65rem .85rem;border-radius:10px;background:var(--light);margin-bottom:.5rem;font-size:.88rem}
 .an-activity strong{display:block}
 .an-activity span{font-size:.78rem;color:var(--muted)}
-.an-btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:.35rem .7rem;font-size:.8rem;font-weight:600;cursor:pointer;font-family:inherit;margin-right:.35rem}
+.an-btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:.35rem .7rem;font-size:.8rem;font-weight:600;cursor:pointer;font-family:inherit;margin-right:.35rem;text-decoration:none;color:inherit;display:inline-flex;align-items:center}
+.an-btn-p{background:linear-gradient(135deg,var(--navy),var(--mid));color:#fff;border:none}
+.an-row-on td{background:#e8f4fc!important}
+.an-topic-panel{margin-top:.85rem;padding:.85rem 1rem;background:var(--light);border-radius:12px;border:1px solid #c5e0f5}
+.an-topic-panel p{margin:.35rem 0;font-size:.88rem;line-height:1.45;color:var(--navy)}
+.an-topic-action{color:var(--muted)!important}
+.an-topic-actions{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.55rem}
 @@media(max-width:900px){.an-kpis{grid-template-columns:1fr 1fr}.an-grid{grid-template-columns:1fr}}
 </style>
 
@@ -153,7 +159,7 @@ button.an-activity span{font-size:.75rem;color:var(--muted,#5f6b85)}
                 <tbody>
                     @foreach (var t in topics)
                     {
-                        <tr @onclick="() => ShowTopic(t)">
+                        <tr class="@(selectedTopic?.Name==t.Name?"an-row-on":null)" @onclick="() => ShowTopic(t)">
                             <td><strong>@t.Name</strong></td>
                             <td>@t.Count</td>
                             <td class="@(t.Trend>=0?"an-up":"an-down")">@(t.Trend>=0?"+":"")@t.Trend%</td>
@@ -161,6 +167,19 @@ button.an-activity span{font-size:.75rem;color:var(--muted,#5f6b85)}
                     }
                 </tbody>
             </table>
+            @if (selectedTopic is not null)
+            {
+                <div class="an-topic-panel">
+                    <strong>@selectedTopic.Name</strong>
+                    <p>@selectedTopic.Summary</p>
+                    <p class="an-topic-action"><em>Recommended:</em> @selectedTopic.Action</p>
+                    <div class="an-topic-actions">
+                        <button type="button" class="an-btn an-btn-p" @onclick="OpenTopicRoute">Open related workspace</button>
+                        <a class="an-btn" href="@selectedTopic.IsacaUrl" target="_blank" rel="noopener">ISACA official page</a>
+                        <button type="button" class="an-btn" @onclick="() => selectedTopic = null">Close</button>
+                    </div>
+                </div>
+            }
         </article>
         <article class="an-card">
             <h2>Recent activity</h2>
@@ -187,9 +206,10 @@ button.an-activity span{font-size:.75rem;color:var(--muted,#5f6b85)}
     private double avgResponse = 2.4;
     private int dayIndex = 4;
     private int maxDay = 1;
+    private Topic? selectedTopic;
 
     private record Day(string Label, int Count);
-    private record Topic(string Name, int Count, int Trend);
+    private record Topic(string Name, int Count, int Trend, string Summary, string Action, string Route, string IsacaUrl);
     private record Act(string Title, string When);
 
     private Day[] days = Array.Empty<Day>();
@@ -214,11 +234,26 @@ button.an-activity span{font-size:.75rem;color:var(--muted,#5f6b85)}
         questions = days.Sum(d => d.Count);
         topics = new List<Topic>
         {
-            new("Membership renewal", 186, 12),
-            new("Event registration", 142, 8),
-            new("CPE credit questions", 98, -3),
-            new("Certification prep", 87, 15),
-            new("Chapter governance", 64, 5),
+            new("Membership renewal", 186, 12,
+                "Members ask how to renew, prorate dues, and update chapter affiliation in the ISACA portal.",
+                "Share the renewal checklist, due dates, and student/professional paths. Escalate payment errors.",
+                "/knowledge-base", "https://www.isaca.org/membership"),
+            new("Event registration", 142, 8,
+                "Questions about webinar links, capacity, waitlists, and CPE eligibility for chapter events.",
+                "Publish registration at least 3 weeks ahead and keep the Events calendar current.",
+                "/events", "https://www.isaca.org/training-and-events"),
+            new("CPE credit questions", 98, -3,
+                "How to claim CPE, required hours by certification, and reporting deadlines.",
+                "Point members to CPE policy and logging steps; verify event CPE was pre-approved.",
+                "/knowledge-base", "https://www.isaca.org/credentialing/cpe"),
+            new("Certification prep", 87, 15,
+                "Study plans for CISA, CISM, CRISC, exam domains, and practice resources.",
+                "Link official exam candidate guides and chapter study groups.",
+                "/resource-library", "https://www.isaca.org/credentialing"),
+            new("Chapter governance", 64, 5,
+                "Board roles, bylaws, officer transitions, and approved chapter procedures.",
+                "Open Governance register for current policies and review dates.",
+                "/governance", "https://www.isaca.org/chapters"),
         };
         activity = new List<Act>
         {
@@ -250,7 +285,14 @@ button.an-activity span{font-size:.75rem;color:var(--muted,#5f6b85)}
 
     private void ShowTopic(Topic t)
     {
-        focusText = $"{t.Name}: {t.Count} questions, trend {(t.Trend >= 0 ? "+" : "")}{t.Trend}% vs prior period.";
+        selectedTopic = t;
+        focusText = $"{t.Name}: {t.Count} questions, trend {(t.Trend >= 0 ? "+" : "")}{t.Trend}% vs prior period. {t.Summary}";
+    }
+
+    private void OpenTopicRoute()
+    {
+        if (selectedTopic is null) return;
+        Navigation.NavigateTo(selectedTopic.Route);
     }
 
     private void Refresh()
