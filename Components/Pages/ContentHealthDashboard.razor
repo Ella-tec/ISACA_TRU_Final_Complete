@@ -1,7 +1,8 @@
 @page "/content-health"
 @rendermode InteractiveServer
+@inject NavigationManager Navigation
 
-<PageTitle>Content Health | Isa</PageTitle>
+<PageTitle>Content Health | TRU</PageTitle>
 
 <style>
 .ch{--navy:#1d2d5c;--blue:#00a4e4;--mid:#07649d;--green:#6cb33f;--light:#e7f0f5;--muted:#5f6b85;--line:#e2e8f0;--red:#e31837;--orange:#e57524;
@@ -44,7 +45,7 @@ cursor:pointer;text-align:left;font-family:inherit;color:inherit;transition:tran
 .ch-bars{display:flex;align-items:flex-end;gap:6px;height:110px;margin:.5rem 0 1.2rem}
 .ch-bar{flex:1;border-radius:6px 6px 3px 3px;background:linear-gradient(180deg,var(--teal,#36ac91),var(--mid));cursor:pointer;min-height:8px;border:none;padding:0}
 .ch-bar:hover{filter:brightness(1.1)}
-.ch-btn{border:1px solid var(--line);background:#fff;border-radius:10px;padding:.45rem .9rem;font-weight:600;font-size:.85rem;cursor:pointer;font-family:inherit}
+.ch-btn{border:1px solid var(--line);background:#fff;border-radius:10px;padding:.45rem .9rem;font-weight:600;font-size:.85rem;cursor:pointer;font-family:inherit;text-decoration:none;color:inherit;display:inline-flex;align-items:center}
 .ch-btn-p{background:linear-gradient(135deg,var(--navy),var(--mid));color:#fff;border:none}
 @@media(max-width:1000px){.ch-kpis{grid-template-columns:repeat(3,1fr)}.ch-grid{grid-template-columns:1fr}}
 @@media(max-width:600px){.ch-kpis{grid-template-columns:1fr 1fr}}
@@ -65,7 +66,7 @@ cursor:pointer;text-align:left;font-family:inherit;color:inherit;transition:tran
             <div class="l">Articles</div><div class="v">@articles</div><div class="t ok">+@newMonth this month</div>
         </button>
         <button type="button" class="ch-kpi @(focus=="stale"?"on":null)" @onclick='() => SetFocus("stale")'>
-            <div class="l">Stale (&gt;12 mo)</div><div class="v">@stale</div><div class="t warn">Needs review</div>
+            <div class="l">Stale (>12 mo)</div><div class="v">@stale</div><div class="t warn">Needs review</div>
         </button>
         <button type="button" class="ch-kpi @(focus=="links"?"on":null)" @onclick='() => SetFocus("links")'>
             <div class="l">Broken links</div><div class="v">@broken</div><div class="t bad">Fix priority</div>
@@ -83,14 +84,21 @@ cursor:pointer;text-align:left;font-family:inherit;color:inherit;transition:tran
 
     @if (!string.IsNullOrEmpty(detail))
     {
-        <div class="ch-detail">@detail</div>
+        <div class="ch-detail">
+            <div>@detail</div>
+            <div style="margin-top:.55rem;display:flex;flex-wrap:wrap;gap:.4rem">
+                <button type="button" class="ch-btn ch-btn-p" @onclick="OpenKnowledge">Open Knowledge base</button>
+                <button type="button" class="ch-btn" @onclick="OpenGovernance">Governance & policies</button>
+                <a class="ch-btn" href="https://www.isaca.org/resources" target="_blank" rel="noopener">ISACA Resources</a>
+            </div>
+        </div>
     }
 
     <div class="ch-grid">
         <article class="ch-card">
             <div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;flex-wrap:wrap">
                 <div>
-                    <h2>Freshness &amp; gaps</h2>
+                    <h2>Freshness & gaps</h2>
                     <p class="sub">Click a row · filter by status</p>
                 </div>
                 <button type="button" class="ch-btn" @onclick="Refresh">Refresh</button>
@@ -179,7 +187,7 @@ cursor:pointer;text-align:left;font-family:inherit;color:inherit;transition:tran
             "art" => $"Knowledge base holds {articles} articles (+{newMonth} this month). Quality score {quality}/100 weights freshness, links, metadata, and approvals.",
             "stale" => $"{stale} articles are older than 12 months. Prioritize Vendor risk template and similar risk content for rewrite.",
             "links" => $"{broken} broken external links detected — mostly outdated ISACA resource URLs in policy PDFs.",
-            "meta" => $"{meta} articles missing topic tags or titles. Tagging improves search and Isa assistant retrieval.",
+            "meta" => $"{meta} articles missing topic tags or titles. Tagging improves search and TRU assistant retrieval.",
             "fresh" => $"Average content age is {avgFresh} months — inside the healthy band for chapter knowledge bases.",
             "sla" => $"Approval SLA at {sla}% on-time. Keep review cycles under 5 business days.",
             _ => ""
@@ -188,9 +196,12 @@ cursor:pointer;text-align:left;font-family:inherit;color:inherit;transition:tran
 
     private void SelectItem(Item item)
     {
-        detail = $"{item.Title} ({item.Area}) — status {item.Status}, last touch {item.Age}.";
+        detail = $"{item.Title} ({item.Area}) — status {item.Status}, last touch {item.Age}. Use the buttons below to open Knowledge base or Governance.";
         focus = item.Status is "Stale" or "Aging" ? "stale" : "art";
     }
+
+    private void OpenKnowledge() => Navigation.NavigateTo("/knowledge-base");
+    private void OpenGovernance() => Navigation.NavigateTo("/governance");
 
     private void Refresh()
     {
