@@ -1,5 +1,6 @@
 @page "/events"
 @rendermode InteractiveServer
+@inject NavigationManager Navigation
 
 <PageTitle>Events & Calendar | TRU</PageTitle>
 
@@ -28,15 +29,14 @@ flex:1 1 auto;min-height:0}
 .ev-date{width:48px;text-align:center;background:var(--soft);border-radius:10px;padding:.35rem;color:var(--accent)}
 .ev-date strong{display:block;font-size:1.1rem;line-height:1.1}
 .ev-date span{font-size:.68rem;font-weight:700}
-.ev-copy{flex:1}
-.ev-copy strong{display:block;font-size:.92rem}
+.ev-copy{flex:1;min-width:0}
+.ev-copy strong{display:block;font-size:.95rem}
 .ev-copy span{font-size:.8rem;color:var(--muted)}
-.ev-form{display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-top:.7rem}
-.ev-form label{display:grid;gap:.2rem;font-size:.78rem;font-weight:600;color:var(--muted)}
-.ev-form input,.ev-form select{border:1.5px solid var(--line);border-radius:10px;padding:.45rem .65rem;font:inherit}
-.ev-form input:focus,.ev-form select:focus{outline:none;border-color:var(--accent)}
-.ev-toast{margin-top:.65rem;padding:.5rem .8rem;background:var(--soft);border-radius:10px;font-size:.86rem;color:var(--accent);font-weight:600}
-@@media(max-width:900px){.ev-stats{grid-template-columns:1fr}.ev-grid{grid-template-columns:1fr}.ev-form{grid-template-columns:1fr}}
+.ev-form{display:grid;grid-template-columns:1fr 1fr;gap:.65rem}
+.ev-form label{display:flex;flex-direction:column;gap:.25rem;font-size:.78rem;font-weight:600;color:var(--muted)}
+.ev-form input,.ev-form select{padding:.45rem .6rem;border:1.5px solid var(--line);border-radius:8px;font:inherit;color:var(--navy)}
+.ev-toast{margin-top:.6rem;padding:.5rem .7rem;background:var(--soft);border-radius:8px;font-size:.85rem;color:var(--accent)}
+@@media(max-width:900px){.ev-grid{grid-template-columns:1fr}.ev-stats{grid-template-columns:1fr}.ev-form{grid-template-columns:1fr}}
 </style>
 
 <section class="ev">
@@ -46,6 +46,7 @@ flex:1 1 auto;min-height:0}
         <p>Keep chapter activities, webinars and learning opportunities organized in one place.</p>
         <div class="actions">
             <button type="button" class="ev-btn ev-btn--solid" @onclick="() => showForm = !showForm">@(showForm ? "Hide form" : "+ Add event")</button>
+            <a class="ev-btn ev-btn--ghost" style="text-decoration:none" href="https://www.isaca.org/training-and-events" target="_blank" rel="noopener">ISACA training & events</a>
         </div>
     </header>
 
@@ -87,13 +88,29 @@ flex:1 1 auto;min-height:0}
             </div>
             @foreach (var item in filteredItems)
             {
-                <div class="ev-row">
+                <div class="ev-row" style="cursor:pointer;@(selected==item?"background:var(--soft);border-radius:10px;padding:.35rem;":"")" @onclick="() => SelectEvent(item)">
                     <div class="ev-date"><strong>@item.Date.ToString("dd")</strong><span>@item.Date.ToString("MMM")</span></div>
                     <div class="ev-copy"><strong>@item.Title</strong><span>@item.Type · @item.Location</span></div>
-                    <button type="button" style="border:none;background:var(--soft);color:var(--accent);border-radius:8px;padding:.28rem .5rem;cursor:pointer;font-weight:700" @onclick="() => RemoveItem(item)">✕</button>
+                    <button type="button" title="Remove" style="border:none;background:var(--soft);color:var(--accent);border-radius:8px;padding:.28rem .5rem;cursor:pointer;font-weight:700" @onclick="() => RemoveItem(item)" @onclick:stopPropagation="true">✕</button>
                 </div>
             }
             @if (!filteredItems.Any()) { <p style="color:var(--muted);font-size:.88rem">No events match the filter.</p> }
+            @if (selected is not null)
+            {
+                <div style="margin-top:.85rem;padding:.85rem;background:var(--soft);border-radius:12px">
+                    <strong>@selected.Title</strong>
+                    <div style="font-size:.84rem;color:var(--muted);margin:.25rem 0 .65rem">@selected.Date.ToString("ddd, MMM d yyyy") · @selected.Type · @selected.Location</div>
+                    <div style="display:flex;flex-wrap:wrap;gap:.4rem">
+                        @if (selected.Location.Contains("Online", StringComparison.OrdinalIgnoreCase) || selected.Location.Contains("Hybrid", StringComparison.OrdinalIgnoreCase))
+                        {
+                            <a class="ev-btn" style="background:var(--accent);color:#fff;text-decoration:none" href="https://meet.google.com/new" target="_blank" rel="noopener">Start Meet</a>
+                        }
+                        <a class="ev-btn" style="text-decoration:none;display:inline-block;background:#fff;border:1px solid var(--line);color:var(--navy)" href="@GoogleCalUrl(selected)" target="_blank" rel="noopener">Add to Google Calendar</a>
+                        <a class="ev-btn" style="text-decoration:none;display:inline-block;background:#fff;border:1px solid var(--line);color:var(--navy)" href="https://www.isaca.org/training-and-events" target="_blank" rel="noopener">ISACA events</a>
+                        <button type="button" class="ev-btn" style="background:#fff;border:1px solid var(--line)" @onclick="() => selected = null">Close</button>
+                    </div>
+                </div>
+            }
         </article>
 
         <article class="ev-card">
@@ -101,10 +118,11 @@ flex:1 1 auto;min-height:0}
             @foreach (var g in chapterEvents.GroupBy(e => e.Type).OrderByDescending(g => g.Count()))
             {
                 var pct = chapterEvents.Count == 0 ? 0 : (int)Math.Round(100.0 * g.Count() / chapterEvents.Count);
-                <div style="margin:.55rem 0">
+                var key = g.Key;
+                <button type="button" @onclick="() => typeFilter = key" style="display:block;width:100%;text-align:left;border:none;background:transparent;cursor:pointer;margin:.55rem 0;padding:0;font:inherit;color:inherit">
                     <div style="display:flex;justify-content:space-between;font-size:.86rem"><span>@g.Key</span><strong>@g.Count()</strong></div>
                     <div style="height:7px;background:var(--soft);border-radius:99px;overflow:hidden;margin-top:.2rem"><div style="height:100%;width:@(pct)%;background:var(--accent);border-radius:99px"></div></div>
-                </div>
+                </button>
             }
             <h3 style="margin:1rem 0 .45rem;font-size:.92rem">Planning tips</h3>
             <ul style="margin:0;padding-left:1.1rem;font-size:.86rem;color:var(--muted);line-height:1.5">
@@ -121,6 +139,7 @@ flex:1 1 auto;min-height:0}
     private bool showForm;
     private string typeFilter = "";
     private string? message;
+    private ChapterEventItem? selected;
 
     private List<ChapterEventItem> chapterEvents = new()
     {
@@ -155,10 +174,22 @@ flex:1 1 auto;min-height:0}
         newItem = new ChapterEventItem { Date = DateTime.Today.AddDays(7), Type = "Webinar" };
     }
 
+    private void SelectEvent(ChapterEventItem item) => selected = item;
+
     private void RemoveItem(ChapterEventItem item)
     {
         chapterEvents.Remove(item);
+        if (selected == item) selected = null;
         message = $"Removed “{item.Title}”.";
+    }
+
+    private static string GoogleCalUrl(ChapterEventItem e)
+    {
+        var start = e.Date.ToString("yyyyMMdd");
+        var text = Uri.EscapeDataString(e.Title);
+        var details = Uri.EscapeDataString($"{e.Type} · {e.Location} · TRU Chapter");
+        var loc = Uri.EscapeDataString(e.Location);
+        return $"https://calendar.google.com/calendar/render?action=TEMPLATE&text={text}&dates={start}/{start}&details={details}&location={loc}";
     }
 
     private sealed class ChapterEventItem
