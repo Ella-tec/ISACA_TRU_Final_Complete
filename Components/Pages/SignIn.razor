@@ -90,26 +90,31 @@ html, body { margin: 0 !important; padding: 0 !important; background: #0a1f4d !i
   transition: width .25s ease, border-radius .25s ease, background .25s ease;
 }
 .si-hero__dot.is-on { background: #fff; width: 16px; border-radius: 999px; }
-/* Full-width video band — same edge-to-edge as hero slides */
+/* Full-bleed 16:9 video — edge-to-edge, no black side bars */
 .si-vid {
   width: 100%; margin: 0; padding: 0; box-sizing: border-box;
-  background: #000; flex: 1 1 auto;
-  display: flex; flex-direction: column;
+  background: #000; flex: 0 0 auto;
+  display: block;
 }
 .si-vid__frame {
   position: relative;
   width: 100%;
-  height: clamp(220px, 48vh, 520px);
-  overflow: hidden; background: #000;
+  aspect-ratio: 16 / 9;
+  height: auto;
+  overflow: hidden;
+  background: #000;
   border-radius: 0;
 }
 .si-vid__frame iframe {
-  position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block;
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
 }
 .si-vid__hint {
-  margin: 0; padding: .35rem .75rem;
-  font-size: .7rem; color: rgba(255,255,255,.65); text-align: center;
-  background: #0a1f4d;
+  display: none;
 }
 .si-modal-bg {
   position: fixed; inset: 0; z-index: 2147483600;
@@ -153,11 +158,11 @@ html, body { margin: 0 !important; padding: 0 !important; background: #0a1f4d !i
 @@media (max-width: 800px) {
   .si-search { max-width: none; order: 3; flex-basis: 100%; }
   .si-hero { height: clamp(200px, 34vh, 280px); max-height: 280px; }
-  .si-vid__frame { height: clamp(180px, 40vh, 320px); }
+  .si-vid__frame { aspect-ratio: 16 / 9; height: auto; }
 }
 @@media (max-height: 700px) {
   .si-hero { height: clamp(180px, 32vh, 240px); max-height: 240px; }
-  .si-vid__frame { height: clamp(160px, 38vh, 280px); }
+  .si-vid__frame { aspect-ratio: 16 / 9; height: auto; }
   .si-hero__inner { padding: 1rem 1.1rem 2rem; }
 }
 </style>
@@ -203,7 +208,6 @@ html, body { margin: 0 !important; padding: 0 !important; background: #0a1f4d !i
                     allowfullscreen
                     referrerpolicy="strict-origin-when-cross-origin"></iframe>
         </div>
-        <p class="si-vid__hint">Videos play automatically and loop. Starts muted — use volume to unmute.</p>
     </div>
 </div>
 
