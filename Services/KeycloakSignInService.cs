@@ -11,10 +11,45 @@ namespace IsaChatApp.Services;
 
 /// <summary>
 /// Sign-in against the team's Keycloak server.
-/// Username may be staff.dev or staff.dev@example.org (local-part is used).
+///
+/// How it fits together:
+///   1. The sign-in page (Components/Pages/SignIn.razor) sends the email
+///      address and password here. They go straight to Keycloak's token
+///      endpoint; this app never stores the password.
+///   2. If Keycloak accepts them, it sends back a signed access token
+///      (plus a refresh token). Those tokens stay on the server, in memory,
+///      under a random session ID.
+///   3. The browser only gets an encrypted sign-in cookie holding the
+///      person's ID, name, email, roles and that session ID.
+///   4. When the chat sends a question, ChatWidget asks this service for
+///      a current access token for the session and passes it to the
+///      pipeline, where the access_control stage checks it.
+///
+/// Sign-in is by EMAIL ADDRESS, never by name, so it works the same for
+/// every chapter in every country. Passwords can contain any characters.
+/// Username may also be the short Keycloak id (e.g. staff.dev); email form
+/// staff.dev@example.org is normalized to staff.dev.
+///
+/// Keycloak settings live in appsettings.json under "Keycloak" -- see
+/// docs/sign-in-setup.md for what the Keycloak client needs.
+///
+/// Prototype limits: tokens are kept in memory, so restarting the app signs
+/// everyone out. Refresh is best-effort. Logout calls Keycloak when possible.
 /// </summary>
 public sealed class KeycloakSignInService
 {
+    /// <summary>Claim type for the in-memory token session id on the cookie principal.</summary>
+    public const string SessionClaim = "isa_session";
+
+    /// <summary>Optional display greeting claim.</summary>
+    public const string GreetingClaim = "isa_greeting";
+
+    /// <summary>Locale claim when present on the token.</summary>
+    public const string LocaleClaim = "locale";
+
+    /// <summary>Directory / person id claim used by notebook and journey panels.</summary>
+    public const string PersonIdClaim = "person_id";
+
     private readonly IHttpClientFactory _httpFactory;
     private readonly IConfiguration _config;
     private readonly ILogger<KeycloakSignInService> _log;
@@ -45,7 +80,7 @@ public sealed class KeycloakSignInService
             return new SignInResult(SignInOutcome.NotConfigured);
         }
 
-        // Keycloak users are short usernames (staff.dev). Accept email form too.
+        // Accept staff.dev or staff.dev@example.org (Keycloak usernames are local-part).
         var username = NormalizeUsername(email);
 
         var form = BaseForm();
@@ -62,18 +97,24 @@ public sealed class KeycloakSignInService
             if (response.StatusCode is HttpStatusCode.BadRequest or HttpStatusCode.Unauthorized)
             {
                 var error = await ReadErrorAsync(response, ct);
+
                 if (error.Error == "invalid_grant")
                 {
                     _log.LogInformation("Sign-in refused by Keycloak: {Description}", error.Description);
                     return new SignInResult(SignInOutcome.WrongCredentials);
                 }
 
-                _log.LogWarning("Keycloak rejected the sign-in request: {Error} - {Description}.",
+                _log.LogWarning("Keycloak rejected the sign-in request: {Error} - {Description}. Check the client settings in docs/sign-in-setup.md.",
                     error.Error, error.Description);
                 return new SignInResult(SignInOutcome.NotConfigured);
             }
 
-            response.EnsureSuccessStatusCode();
+            if (!response.IsSuccessStatusCode)
+            {
+                _log.LogWarning("Keycloak token endpoint returned {Status}", (int)response.StatusCode);
+                return new SignInResult(SignInOutcome.ServiceError);
+            }
+
             tokens = await response.Content.ReadFromJsonAsync<TokenResponse>(cancellationToken: ct);
         }
         catch (Exception ex)
@@ -182,7 +223,7 @@ public sealed class KeycloakSignInService
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, jwt.Subject ?? sessionId),
-            new("kc_session", sessionId),
+            new(SessionClaim, sessionId),
         };
 
         string? name = jwt.Claims.FirstOrDefault(c => c.Type == "name")?.Value
@@ -193,6 +234,12 @@ public sealed class KeycloakSignInService
         var email = jwt.Claims.FirstOrDefault(c => c.Type == "email")?.Value;
         if (!string.IsNullOrEmpty(email))
             claims.Add(new Claim(ClaimTypes.Email, email));
+
+        // person_id may live as a custom claim or preferred_username for directory linkage
+        var personId = jwt.Claims.FirstOrDefault(c => c.Type == PersonIdClaim)?.Value
+            ?? jwt.Claims.FirstOrDefault(c => c.Type == "preferred_username")?.Value;
+        if (personId is not null)
+            claims.Add(new Claim(PersonIdClaim, personId));
 
         foreach (var role in ExtractRoles(jwt))
             claims.Add(new Claim(ClaimTypes.Role, role));
@@ -207,9 +254,6 @@ public sealed class KeycloakSignInService
         foreach (var c in jwt.Claims.Where(c => c.Type is "role" or ClaimTypes.Role))
             roles.Add(c.Value);
 
-        // realm_access.roles
-        var realm = jwt.Claims.FirstOrDefault(c => c.Type == "realm_access")?.Value;
-        // often realm_access is a JSON object in the payload, not a simple claim — parse from payload
         if (jwt.Payload.TryGetValue("realm_access", out var realmObj) && realmObj is JsonElement el &&
             el.TryGetProperty("roles", out var rolesEl) && rolesEl.ValueKind == JsonValueKind.Array)
         {
