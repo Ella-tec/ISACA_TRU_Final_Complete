@@ -229,7 +229,7 @@ html, body { margin: 0 !important; padding: 0 !important; background: #0a1f4d !i
                 <input type="hidden" name="returnUrl" value="@SafeReturnUrl" />
                 <div class="si-field">
                     <label class="si-label" for="signin-email">Username or email</label>
-                    <input id="signin-email" class="si-input" name="email" type="text" inputmode="email" autocomplete="username" autocapitalize="none" spellcheck="false" required value="@Input.Email" placeholder="staff.dev" />
+                    <input id="signin-email" class="si-input" name="email" type="text" inputmode="email" autocomplete="username" autocapitalize="none" spellcheck="false" required value="@Input.Email" placeholder="staff.dev@example.org" />
                 </div>
                 <div class="si-field">
                     <label class="si-label" for="signin-password">Password</label>
@@ -249,7 +249,7 @@ html, body { margin: 0 !important; padding: 0 !important; background: #0a1f4d !i
                     Microsoft Entra ID sign-in is not connected yet. MFA and Microsoft Sentinel monitoring apply only after your organization connects identity and security services.
                 </div>
             }
-            <p class="si-hint">Test user: <code>staff.dev</code> · password in <code>keycloak/dev-passwords.local.csv</code> · Keycloak on port 8080</p>
+            <p class="si-hint">Working login: <code>staff.dev@example.org</code> · password in <code>keycloak/dev-passwords.local.csv</code></p>
         </div>
     </div>
 }
@@ -302,7 +302,7 @@ html, body { margin: 0 !important; padding: 0 !important; background: #0a1f4d !i
         {
             ErrorMessage = ErrorCode switch
             {
-                "credentials" => "Username or password is wrong. Use staff.dev (not an @email) and the password from keycloak/dev-passwords.local.csv. Keycloak must be running on localhost:8080.",
+                "credentials" => "Username or password is wrong. Try staff.dev@example.org or staff.dev with the password from keycloak/dev-passwords.local.csv.",
                 "config" => "Sign-in isn't configured — check Keycloak:Authority in appsettings and that Keycloak is running.",
                 _ => "Sign-in service unreachable. Start Keycloak (realm isa on port 8080) and try again."
             };
@@ -347,7 +347,7 @@ html, body { margin: 0 !important; padding: 0 !important; background: #0a1f4d !i
 
     private sealed class SignInInput
     {
-        public string Email { get; set; } = "staff.dev";
+        public string Email { get; set; } = "staff.dev@example.org";
         public string Password { get; set; } = string.Empty;
     }
 }
