@@ -11,63 +11,23 @@ namespace IsaChatApp.Services;
 
 /// <summary>
 /// Sign-in against the team's Keycloak server.
-///
-/// How it fits together:
-///   1. The sign-in page (Components/Pages/SignIn.razor) sends the email
-///      address and password here. They go straight to Keycloak's token
-///      endpoint; this app never stores the password.
-///   2. If Keycloak accepts them, it sends back a signed access token
-///      (plus a refresh token). Those tokens stay on the server, in memory,
-///      under a random session ID.
-///   3. The browser only gets an encrypted sign-in cookie holding the
-///      person's ID, name, email, roles and that session ID.
-///   4. When the chat sends a question, ChatWidget asks this service for
-///      a current access token for the session and passes it to the
-///      pipeline, where the access_control stage checks it.
-///
-/// Sign-in is by EMAIL ADDRESS, never by name, so it works the same for
-/// every chapter in every country. Passwords can contain any characters.
-///
-/// Keycloak settings live in appsettings.json under "Keycloak" -- see
-/// docs/sign-in-setup.md for what the Keycloak client needs.
-///
-/// Prototype limits: tokens are kept in memory, so restarting the app
-/// signs everyone out of the chat (they just sign in again).
+/// Username may be staff.dev or staff.dev@example.org (local-part is used).
 /// </summary>
-public class KeycloakSignInService
+public sealed class KeycloakSignInService
 {
-    /// <summary>Claim holding the server-side session ID (links the cookie to the stored tokens).</summary>
-    public const string SessionClaim = "isa_session";
-
-    /// <summary>Claim holding the name Isa uses to greet the person (their preferred form of address).</summary>
-    public const string GreetingClaim = "isa_greeting";
-
-    /// <summary>Claim holding the person's preferred language code, e.g. "ja-JP".</summary>
-    public const string LocaleClaim = "locale";
-
-    /// <summary>
-    /// Claim holding the person's ID in the directory, e.g. "P-0001".
-    /// Only chapter people have one (staff test accounts don't). The
-    /// onboarding journey card uses it to look up the person's role and
-    /// day of term (Components/Shared/JourneyCard.razor).
-    /// </summary>
-    public const string PersonIdClaim = "person_id";
-
-    private readonly HttpClient _http;
+    private readonly IHttpClientFactory _httpFactory;
     private readonly IConfiguration _config;
     private readonly ILogger<KeycloakSignInService> _log;
     private readonly ConcurrentDictionary<string, StoredTokens> _sessions = new();
 
-    public KeycloakSignInService(
-        IHttpClientFactory httpFactory,
-        IConfiguration config,
-        ILogger<KeycloakSignInService> log)
+    public KeycloakSignInService(IHttpClientFactory httpFactory, IConfiguration config, ILogger<KeycloakSignInService> log)
     {
-        _http = httpFactory.CreateClient("keycloak");
-        _http.Timeout = TimeSpan.FromSeconds(10);
+        _httpFactory = httpFactory;
         _config = config;
         _log = log;
     }
+
+    private HttpClient _http => _httpFactory.CreateClient();
 
     private string Authority => (_config["Keycloak:Authority"] ?? "").TrimEnd('/');
     private string ClientId => _config["Keycloak:ClientId"] ?? "";
@@ -77,8 +37,6 @@ public class KeycloakSignInService
     private string TokenEndpoint => $"{Authority}/protocol/openid-connect/token";
     private string LogoutEndpoint => $"{Authority}/protocol/openid-connect/logout";
 
-    // ---- Sign in ---------------------------------------------------------
-
     public async Task<SignInResult> SignInAsync(string email, string password, CancellationToken ct = default)
     {
         if (string.IsNullOrEmpty(Authority) || string.IsNullOrEmpty(ClientId))
@@ -87,9 +45,12 @@ public class KeycloakSignInService
             return new SignInResult(SignInOutcome.NotConfigured);
         }
 
+        // Keycloak users are short usernames (staff.dev). Accept email form too.
+        var username = NormalizeUsername(email);
+
         var form = BaseForm();
         form["grant_type"] = "password";
-        form["username"] = email.Trim();
+        form["username"] = username;
         form["password"] = password;
         form["scope"] = "openid profile email";
 
@@ -101,56 +62,43 @@ public class KeycloakSignInService
             if (response.StatusCode is HttpStatusCode.BadRequest or HttpStatusCode.Unauthorized)
             {
                 var error = await ReadErrorAsync(response, ct);
-
-                // invalid_grant = wrong email/password, unknown user, or a
-                // disabled account. The person sees one general message
-                // either way, so the page never reveals which emails exist.
                 if (error.Error == "invalid_grant")
                 {
                     _log.LogInformation("Sign-in refused by Keycloak: {Description}", error.Description);
                     return new SignInResult(SignInOutcome.WrongCredentials);
                 }
 
-                // Anything else (unauthorized_client, invalid_client, ...)
-                // means the Keycloak client is set up differently than this
-                // app expects. See docs/sign-in-setup.md.
-                _log.LogWarning("Keycloak rejected the sign-in request: {Error} - {Description}. Check the client settings in docs/sign-in-setup.md.",
+                _log.LogWarning("Keycloak rejected the sign-in request: {Error} - {Description}.",
                     error.Error, error.Description);
                 return new SignInResult(SignInOutcome.NotConfigured);
             }
 
-            if (!response.IsSuccessStatusCode)
-            {
-                _log.LogWarning("Keycloak sign-in returned HTTP {Status}.", (int)response.StatusCode);
-                return new SignInResult(SignInOutcome.ServiceUnavailable);
-            }
-
-            tokens = await response.Content.ReadFromJsonAsync<TokenResponse>(ct);
+            response.EnsureSuccessStatusCode();
+            tokens = await response.Content.ReadFromJsonAsync<TokenResponse>(cancellationToken: ct);
         }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        catch (Exception ex)
         {
-            _log.LogWarning("Could not reach Keycloak at {Endpoint}: {Message}", TokenEndpoint, ex.Message);
-            return new SignInResult(SignInOutcome.ServiceUnavailable);
+            _log.LogError(ex, "Keycloak token request failed. Is Keycloak running at {Authority}?", Authority);
+            return new SignInResult(SignInOutcome.ServiceError);
         }
 
-        if (string.IsNullOrEmpty(tokens?.AccessToken))
-        {
-            _log.LogWarning("Keycloak sign-in response had no access token.");
-            return new SignInResult(SignInOutcome.ServiceUnavailable);
-        }
+        if (tokens is null || string.IsNullOrEmpty(tokens.AccessToken))
+            return new SignInResult(SignInOutcome.ServiceError);
 
         var sessionId = Guid.NewGuid().ToString("N");
         _sessions[sessionId] = StoredTokens.From(tokens);
         return new SignInResult(SignInOutcome.Success, BuildPrincipal(tokens.AccessToken, sessionId));
     }
 
-    // ---- Tokens for the chat --------------------------------------------
+    private static string NormalizeUsername(string emailOrUser)
+    {
+        var s = (emailOrUser ?? string.Empty).Trim();
+        if (s.Length == 0) return s;
+        var at = s.IndexOf('@');
+        if (at > 0) s = s[..at];
+        return s;
+    }
 
-    /// <summary>
-    /// A current access token for this session, refreshed with Keycloak
-    /// first if it is about to expire. Null if the person isn't signed in,
-    /// the app was restarted, or Keycloak ended the session.
-    /// </summary>
     public async Task<string?> GetAccessTokenAsync(string? sessionId, CancellationToken ct = default)
     {
         if (string.IsNullOrEmpty(sessionId) || !_sessions.TryGetValue(sessionId, out var stored))
@@ -159,7 +107,7 @@ public class KeycloakSignInService
         if (stored.AccessExpiresUtc > DateTime.UtcNow.AddSeconds(30))
             return stored.AccessToken;
 
-        if (string.IsNullOrEmpty(stored.RefreshToken) || stored.RefreshExpiresUtc <= DateTime.UtcNow)
+        if (string.IsNullOrEmpty(stored.RefreshToken))
         {
             _sessions.TryRemove(sessionId, out _);
             return null;
@@ -178,8 +126,8 @@ public class KeycloakSignInService
                 return null;
             }
 
-            var tokens = await response.Content.ReadFromJsonAsync<TokenResponse>(ct);
-            if (string.IsNullOrEmpty(tokens?.AccessToken))
+            var tokens = await response.Content.ReadFromJsonAsync<TokenResponse>(cancellationToken: ct);
+            if (tokens is null || string.IsNullOrEmpty(tokens.AccessToken))
             {
                 _sessions.TryRemove(sessionId, out _);
                 return null;
@@ -188,17 +136,14 @@ public class KeycloakSignInService
             _sessions[sessionId] = StoredTokens.From(tokens);
             return tokens.AccessToken;
         }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        catch
         {
-            _log.LogWarning("Could not refresh the Keycloak token: {Message}", ex.Message);
+            _sessions.TryRemove(sessionId, out _);
             return null;
         }
     }
 
-    // ---- Sign out --------------------------------------------------------
-
-    /// <summary>Forgets the session's tokens and asks Keycloak to end the session too.</summary>
-    public async Task SignOutAsync(string? sessionId, CancellationToken ct = default)
+    public async Task SignOutKeycloakAsync(string? sessionId, CancellationToken ct = default)
     {
         if (string.IsNullOrEmpty(sessionId) || !_sessions.TryRemove(sessionId, out var stored))
             return;
@@ -206,153 +151,140 @@ public class KeycloakSignInService
         if (string.IsNullOrEmpty(stored.RefreshToken))
             return;
 
-        var form = BaseForm();
-        form["refresh_token"] = stored.RefreshToken;
-
         try
         {
-            using var _ = await _http.PostAsync(LogoutEndpoint, new FormUrlEncodedContent(form), ct);
+            var form = BaseForm();
+            form["refresh_token"] = stored.RefreshToken;
+            await _http.PostAsync(LogoutEndpoint, new FormUrlEncodedContent(form), ct);
         }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        catch (Exception ex)
         {
-            // Best effort: the person is signed out of Isa either way.
-            _log.LogInformation("Keycloak logout call failed: {Message}", ex.Message);
+            _log.LogDebug(ex, "Keycloak logout call failed (session already cleared locally).");
         }
     }
-
-    // ---- Helpers -----------------------------------------------------------
 
     private Dictionary<string, string> BaseForm()
     {
-        var form = new Dictionary<string, string> { ["client_id"] = ClientId };
-        if (ClientSecret is not null) form["client_secret"] = ClientSecret;
+        var form = new Dictionary<string, string>
+        {
+            ["client_id"] = ClientId
+        };
+        if (!string.IsNullOrEmpty(ClientSecret))
+            form["client_secret"] = ClientSecret;
         return form;
     }
 
-    /// <summary>
-    /// Turns the Keycloak access token into the claims kept in the sign-in
-    /// cookie. Reads these token claims (the custom ones are optional and
-    /// come from Keycloak user attributes -- see docs/sign-in-setup.md):
-    ///   sub, email, name, preferred_username, locale   (Keycloak standard)
-    ///   display_name     full name as written, in the person's own script
-    ///   form_of_address  how Isa should greet them, e.g. "田中様", "Frau Müller"
-    /// </summary>
     private static ClaimsPrincipal BuildPrincipal(string accessToken, string sessionId)
     {
-        var jwt = new JwtSecurityTokenHandler().ReadJwtToken(accessToken);
-        string? Get(string type) =>
-            jwt.Claims.FirstOrDefault(c => c.Type == type && !string.IsNullOrWhiteSpace(c.Value))?.Value;
-
-        var email = Get("email") ?? Get("preferred_username") ?? "";
-        var displayName = Get("display_name") ?? Get("name") ?? email;
-        var greeting = Get("form_of_address") ?? displayName;
+        var handler = new JwtSecurityTokenHandler();
+        var jwt = handler.ReadJwtToken(accessToken);
 
         var claims = new List<Claim>
         {
-            new(ClaimTypes.NameIdentifier, jwt.Subject ?? email),
-            new(ClaimTypes.Name, displayName),
-            new(ClaimTypes.Email, email),
-            new(GreetingClaim, greeting),
-            new(SessionClaim, sessionId),
+            new(ClaimTypes.NameIdentifier, jwt.Subject ?? sessionId),
+            new("kc_session", sessionId),
         };
 
-        var locale = Get("locale");
-        if (locale is not null) claims.Add(new Claim(LocaleClaim, locale));
+        string? name = jwt.Claims.FirstOrDefault(c => c.Type == "name")?.Value
+            ?? jwt.Claims.FirstOrDefault(c => c.Type == "preferred_username")?.Value;
+        if (!string.IsNullOrEmpty(name))
+            claims.Add(new Claim(ClaimTypes.Name, name));
 
-        var personId = Get("person_id");
-        if (personId is not null) claims.Add(new Claim(PersonIdClaim, personId));
+        var email = jwt.Claims.FirstOrDefault(c => c.Type == "email")?.Value;
+        if (!string.IsNullOrEmpty(email))
+            claims.Add(new Claim(ClaimTypes.Email, email));
 
-        // Keycloak puts roles inside realm_access.roles and
-        // resource_access.<client>.roles.
-        var roles = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var c in jwt.Claims.Where(c => c.Type is "realm_access" or "resource_access"))
-            CollectRoles(c.Value, roles);
-        foreach (var role in roles)
+        foreach (var role in ExtractRoles(jwt))
             claims.Add(new Claim(ClaimTypes.Role, role));
 
-        var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme,
-            ClaimTypes.Name, ClaimTypes.Role);
+        var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
         return new ClaimsPrincipal(identity);
     }
 
-    private static void CollectRoles(string json, HashSet<string> roles)
+    private static IEnumerable<string> ExtractRoles(JwtSecurityToken jwt)
     {
-        try
+        var roles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var c in jwt.Claims.Where(c => c.Type is "role" or ClaimTypes.Role))
+            roles.Add(c.Value);
+
+        // realm_access.roles
+        var realm = jwt.Claims.FirstOrDefault(c => c.Type == "realm_access")?.Value;
+        // often realm_access is a JSON object in the payload, not a simple claim — parse from payload
+        if (jwt.Payload.TryGetValue("realm_access", out var realmObj) && realmObj is JsonElement el &&
+            el.TryGetProperty("roles", out var rolesEl) && rolesEl.ValueKind == JsonValueKind.Array)
         {
-            using var doc = JsonDocument.Parse(json);
-            Walk(doc.RootElement);
-        }
-        catch (JsonException)
-        {
-            // Not JSON -- no roles to read.
+            foreach (var r in rolesEl.EnumerateArray())
+            {
+                var v = r.GetString();
+                if (!string.IsNullOrEmpty(v)) roles.Add(v);
+            }
         }
 
-        void Walk(JsonElement el)
+        if (jwt.Payload.TryGetValue("resource_access", out var resObj) && resObj is JsonElement resEl)
         {
-            if (el.ValueKind != JsonValueKind.Object) return;
-            foreach (var prop in el.EnumerateObject())
+            foreach (var client in resEl.EnumerateObject())
             {
-                if (prop.Name == "roles" && prop.Value.ValueKind == JsonValueKind.Array)
+                if (client.Value.TryGetProperty("roles", out var clientRoles) && clientRoles.ValueKind == JsonValueKind.Array)
                 {
-                    foreach (var r in prop.Value.EnumerateArray())
-                        if (r.ValueKind == JsonValueKind.String) roles.Add(r.GetString()!);
-                }
-                else
-                {
-                    Walk(prop.Value);
+                    foreach (var r in clientRoles.EnumerateArray())
+                    {
+                        var v = r.GetString();
+                        if (!string.IsNullOrEmpty(v)) roles.Add(v);
+                    }
                 }
             }
         }
+
+        return roles;
     }
 
-    private static async Task<(string? Error, string? Description)> ReadErrorAsync(HttpResponseMessage response, CancellationToken ct)
+    private static async Task<(string Error, string Description)> ReadErrorAsync(HttpResponseMessage response, CancellationToken ct)
     {
         try
         {
-            var body = await response.Content.ReadFromJsonAsync<ErrorResponse>(ct);
-            return (body?.Error, body?.Description);
+            var body = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: ct);
+            var err = body.TryGetProperty("error", out var e) ? e.GetString() ?? "" : "";
+            var desc = body.TryGetProperty("error_description", out var d) ? d.GetString() ?? "" : "";
+            return (err, desc);
         }
-        catch (Exception)
+        catch
         {
-            return (null, null);
+            return ("", "");
         }
-    }
-
-    private sealed record StoredTokens(
-        string AccessToken,
-        DateTime AccessExpiresUtc,
-        string? RefreshToken,
-        DateTime RefreshExpiresUtc)
-    {
-        public static StoredTokens From(TokenResponse t) => new(
-            t.AccessToken!,
-            DateTime.UtcNow.AddSeconds(t.ExpiresIn),
-            t.RefreshToken,
-            // Keycloak sends 0 when the refresh token has no fixed expiry.
-            t.RefreshExpiresIn > 0 ? DateTime.UtcNow.AddSeconds(t.RefreshExpiresIn) : DateTime.MaxValue);
     }
 
     private sealed class TokenResponse
     {
-        [JsonPropertyName("access_token")] public string? AccessToken { get; set; }
-        [JsonPropertyName("expires_in")] public int ExpiresIn { get; set; }
+        [JsonPropertyName("access_token")] public string AccessToken { get; set; } = "";
         [JsonPropertyName("refresh_token")] public string? RefreshToken { get; set; }
+        [JsonPropertyName("expires_in")] public int ExpiresIn { get; set; }
         [JsonPropertyName("refresh_expires_in")] public int RefreshExpiresIn { get; set; }
     }
 
-    private sealed class ErrorResponse
+    private sealed class StoredTokens
     {
-        [JsonPropertyName("error")] public string? Error { get; set; }
-        [JsonPropertyName("error_description")] public string? Description { get; set; }
+        public string AccessToken { get; init; } = "";
+        public string? RefreshToken { get; init; }
+        public DateTime AccessExpiresUtc { get; init; }
+
+        public static StoredTokens From(TokenResponse t) => new()
+        {
+            AccessToken = t.AccessToken,
+            RefreshToken = t.RefreshToken,
+            AccessExpiresUtc = DateTime.UtcNow.AddSeconds(Math.Max(30, t.ExpiresIn - 15))
+        };
     }
 }
 
-public enum SignInOutcome
-{
-    Success,
-    WrongCredentials,
-    ServiceUnavailable,
-    NotConfigured
-}
+public enum SignInOutcome { Success, WrongCredentials, NotConfigured, ServiceError }
 
-public record SignInResult(SignInOutcome Outcome, ClaimsPrincipal? Principal = null);
+public sealed class SignInResult
+{
+    public SignInOutcome Outcome { get; }
+    public ClaimsPrincipal? Principal { get; }
+    public SignInResult(SignInOutcome outcome, ClaimsPrincipal? principal = null)
+    {
+        Outcome = outcome;
+        Principal = principal;
+    }
+}
